@@ -1,4 +1,7 @@
-function NutritionResult({ data }) {
+import { memo } from 'react'
+import PropTypes from 'prop-types'
+
+const NutritionResult = memo(function NutritionResult({ data }) {
   const { foodName, description, servingSize, nutrition, confidence } = data
 
   return (
@@ -7,7 +10,7 @@ function NutritionResult({ data }) {
       <p className="food-name">{foodName}</p>
 
       {servingSize && (
-        <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '16px' }}>
+        <p className="serving-size">
           Serving size: {servingSize}
         </p>
       )}
@@ -34,7 +37,7 @@ function NutritionResult({ data }) {
           <div className="label">Fiber</div>
         </div>
         <div className="nutrition-item">
-          <div className="value" style={{ fontSize: '1rem', textTransform: 'capitalize' }}>
+          <div className="value confidence-value">
             {confidence}
           </div>
           <div className="label">Confidence</div>
@@ -48,6 +51,22 @@ function NutritionResult({ data }) {
       )}
     </div>
   )
+})
+
+NutritionResult.propTypes = {
+  data: PropTypes.shape({
+    foodName: PropTypes.string.isRequired,
+    description: PropTypes.string,
+    servingSize: PropTypes.string,
+    nutrition: PropTypes.shape({
+      calories: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+      protein: PropTypes.number.isRequired,
+      carbohydrates: PropTypes.number.isRequired,
+      fat: PropTypes.number.isRequired,
+      fiber: PropTypes.number.isRequired,
+    }).isRequired,
+    confidence: PropTypes.string.isRequired,
+  }).isRequired,
 }
 
 export default NutritionResult

@@ -1,259 +1,122 @@
-import { useState, useRef } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import NutritionResult from './components/NutritionResult'
-
-const VEGETARIAN_FOODS = {
-  'Indian': [
-    'Aloo Gobi',
-    'Aloo Paratha',
-    'Bhindi Masala',
-    'Chana Masala',
-    'Chole Bhature',
-    'Dal Makhani',
-    'Dal Tadka',
-    'Dosa',
-    'Gulab Jamun',
-    'Idli',
-    'Jalebi',
-    'Kadhi',
-    'Kheer',
-    'Lassi',
-    'Malai Kofta',
-    'Masala Chai',
-    'Matar Paneer',
-    'Naan',
-    'Palak Paneer',
-    'Paneer Butter Masala',
-    'Paneer Tikka',
-    'Pani Puri',
-    'Pav Bhaji',
-    'Rajma',
-    'Rasgulla',
-    'Roti',
-    'Samosa',
-    'Shahi Paneer',
-    'Vada',
-    'Vegetable Biryani',
-  ],
-  'Chinese': [
-    'Chilli Paneer',
-    'Crispy Honey Chilli Potatoes',
-    'Fried Rice (Vegetable)',
-    'Gobi Manchurian',
-    'Hakka Noodles (Vegetable)',
-    'Hot and Sour Soup',
-    'Manchow Soup',
-    'Paneer Manchurian',
-    'Spring Rolls (Vegetable)',
-    'Stir Fried Vegetables',
-    'Sweet Corn Soup',
-    'Szechuan Fried Rice',
-    'Tofu in Black Bean Sauce',
-    'Vegetable Chow Mein',
-    'Vegetable Dumplings',
-  ],
-  'Thai': [
-    'Drunken Noodles with Tofu',
-    'Green Curry (Vegetable)',
-    'Mango Sticky Rice',
-    'Massaman Curry (Vegetable)',
-    'Pad See Ew with Tofu',
-    'Pad Thai (Vegetable)',
-    'Papaya Salad',
-    'Pineapple Fried Rice',
-    'Red Curry (Vegetable)',
-    'Sticky Rice',
-    'Thai Basil Tofu',
-    'Thai Coconut Soup',
-    'Thai Fried Rice',
-    'Thai Spring Rolls',
-    'Tom Yum Soup (Vegetable)',
-    'Vegetable Satay',
-    'Yellow Curry (Vegetable)',
-  ],
-  'Mexican': [
-    'Bean Burrito',
-    'Black Bean Soup',
-    'Cheese Enchiladas',
-    'Cheese Quesadilla',
-    'Chilaquiles',
-    'Chips and Guacamole',
-    'Churros',
-    'Elote (Mexican Street Corn)',
-    'Huevos Rancheros',
-    'Mexican Rice',
-    'Nachos',
-    'Refried Beans',
-    'Salsa and Chips',
-    'Vegetable Fajitas',
-    'Veggie Tacos',
-  ],
-  'American': [
-    'Apple Pie',
-    'Baked Potato',
-    'Caesar Salad',
-    'Cheese Pizza',
-    'Chocolate Brownie',
-    'Coleslaw',
-    'French Fries',
-    'Grilled Cheese Sandwich',
-    'Mac and Cheese',
-    'Mashed Potatoes',
-    'Onion Rings',
-    'Pancakes',
-    'Peanut Butter Jelly Sandwich',
-    'Veggie Burger',
-    'Waffles',
-  ],
-  'Italian': [
-    'Bruschetta',
-    'Caprese Salad',
-    'Eggplant Parmesan',
-    'Fettuccine Alfredo',
-    'Garlic Bread',
-    'Gnocchi',
-    'Margherita Pizza',
-    'Minestrone Soup',
-    'Mushroom Risotto',
-    'Pasta Primavera',
-    'Penne Arrabiata',
-    'Ravioli (Cheese/Spinach)',
-    'Spaghetti Marinara',
-    'Tiramisu',
-    'Vegetable Lasagna',
-  ],
-  'Other': [
-    'Falafel (Middle Eastern)',
-    'Greek Salad',
-    'Hummus with Pita',
-    'Japanese Vegetable Tempura',
-    'Korean Bibimbap (Vegetable)',
-    'Mediterranean Mezze Platter',
-    'Spanakopita (Greek)',
-    'Sushi Rolls (Vegetable)',
-    'Tabbouleh',
-    'Vietnamese Spring Rolls',
-  ],
-}
+import { VEGETARIAN_FOODS } from './data/vegetarianFoods'
+import { useImageUpload } from './hooks/useImageUpload'
+import { useNutritionAnalyzer } from './hooks/useNutritionAnalyzer'
 
 function App() {
-  const [inputMode, setInputMode] = useState('image') // 'image' or 'manual'
-  const [image, setImage] = useState(null)
-  const [preview, setPreview] = useState(null)
-  const [mimeType, setMimeType] = useState(null)
+  const [inputMode, setInputMode] = useState('image')
   const [selectedCuisine, setSelectedCuisine] = useState('')
   const [selectedFood, setSelectedFood] = useState('')
   const [customFood, setCustomFood] = useState('')
   const [amount, setAmount] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [result, setResult] = useState(null)
   const [dragOver, setDragOver] = useState(false)
-  const fileInputRef = useRef(null)
 
-  const handleFileSelect = (file) => {
-    if (!file) return
+  const {
+    image,
+    preview,
+    mimeType,
+    error: imageError,
+    fileInputRef,
+    handleFileSelect,
+    clearImage,
+    openFilePicker,
+    setError: setImageError,
+  } = useImageUpload()
 
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file')
-      return
-    }
+  const {
+    loading,
+    error: analyzeError,
+    result,
+    analyze,
+    clearResult,
+    setError: setAnalyzeError,
+  } = useNutritionAnalyzer()
 
-    setError(null)
-    setResult(null)
-    setMimeType(file.type)
+  const error = imageError || analyzeError
 
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      const base64 = reader.result.split(',')[1]
-      setImage(base64)
-      setPreview(reader.result)
-    }
-    reader.readAsDataURL(file)
-  }
-
-  const handleDrop = (e) => {
+  const handleDrop = useCallback((e) => {
     e.preventDefault()
     setDragOver(false)
     const file = e.dataTransfer.files[0]
     handleFileSelect(file)
-  }
+  }, [handleFileSelect])
 
-  const handleDragOver = (e) => {
+  const handleDragOver = useCallback((e) => {
     e.preventDefault()
     setDragOver(true)
-  }
+  }, [])
 
-  const handleDragLeave = () => {
+  const handleDragLeave = useCallback(() => {
     setDragOver(false)
-  }
+  }, [])
 
-  const handleClick = () => {
-    fileInputRef.current?.click()
-  }
+  const handleClick = useCallback(() => {
+    openFilePicker()
+  }, [openFilePicker])
 
-  const handleSubmit = async () => {
-    setLoading(true)
-    setError(null)
+  const handleCuisineChange = useCallback((cuisine) => {
+    setSelectedCuisine(cuisine)
+    setSelectedFood('')
+  }, [])
+
+  const handleFoodChange = useCallback((food) => {
+    setSelectedFood(food)
+  }, [])
+
+  const handleCustomFoodChange = useCallback((value) => {
+    setCustomFood(value)
+  }, [])
+
+  const handleAmountChange = useCallback((value) => {
+    setAmount(value)
+  }, [])
+
+  const handleModeChange = useCallback((mode) => {
+    setInputMode(mode)
+  }, [])
+
+  const handleSubmit = useCallback(async () => {
+    let body = {}
+
+    if (inputMode === 'image') {
+      if (!image) return
+      body = { image, mimeType }
+    } else {
+      const foodName = selectedFood === 'other' ? customFood : selectedFood
+      if (!foodName) {
+        setAnalyzeError('Please select or enter a food item')
+        return
+      }
+      body = { foodName, amount: amount || '1 serving' }
+    }
 
     try {
-      let body = {}
-
-      if (inputMode === 'image') {
-        if (!image) return
-        body = { image, mimeType }
-      } else {
-        const foodName = selectedFood === 'other' ? customFood : selectedFood
-        if (!foodName) {
-          setError('Please select or enter a food item')
-          setLoading(false)
-          return
-        }
-        body = { foodName, amount: amount || '1 serving' }
-      }
-
-      const apiUrl = import.meta.env.VITE_API_URL || ''
-      const response = await fetch(`${apiUrl}/api/analyze`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to analyze')
-      }
-
-      setResult(data)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
+      await analyze(body)
+    } catch {
+      // Error is handled in the hook
     }
-  }
+  }, [inputMode, image, mimeType, selectedFood, customFood, amount, analyze, setAnalyzeError])
 
-  const handleClear = () => {
-    setImage(null)
-    setPreview(null)
-    setMimeType(null)
+  const handleClear = useCallback(() => {
+    clearImage()
+    clearResult()
     setSelectedCuisine('')
     setSelectedFood('')
     setCustomFood('')
     setAmount('')
-    setResult(null)
-    setError(null)
-  }
+  }, [clearImage, clearResult])
 
-  const handleCuisineChange = (cuisine) => {
-    setSelectedCuisine(cuisine)
-    setSelectedFood('')
-  }
+  const canSubmit = useMemo(() =>
+    inputMode === 'image'
+      ? image
+      : (selectedFood && (selectedFood !== 'other' || customFood)),
+    [inputMode, image, selectedFood, customFood]
+  )
 
-  const canSubmit = inputMode === 'image'
-    ? image
-    : (selectedFood && (selectedFood !== 'other' || customFood))
+  const handleFileInputChange = useCallback((e) => {
+    handleFileSelect(e.target.files[0])
+  }, [handleFileSelect])
 
   return (
     <div className="container">
@@ -263,13 +126,13 @@ function App() {
       <div className="mode-toggle">
         <button
           className={`mode-btn ${inputMode === 'image' ? 'active' : ''}`}
-          onClick={() => setInputMode('image')}
+          onClick={() => handleModeChange('image')}
         >
           Upload Image
         </button>
         <button
           className={`mode-btn ${inputMode === 'manual' ? 'active' : ''}`}
-          onClick={() => setInputMode('manual')}
+          onClick={() => handleModeChange('manual')}
         >
           Select Food
         </button>
@@ -283,16 +146,20 @@ function App() {
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
+            role="button"
+            tabIndex={0}
+            aria-label="Upload food image"
+            onKeyDown={(e) => e.key === 'Enter' && handleClick()}
           >
             <div className="icon">📷</div>
             <p>Click or drag & drop an image here</p>
-            <p style={{ fontSize: '0.85rem', color: '#999' }}>Supports JPG, PNG, WebP</p>
+            <p className="upload-hint">Supports JPG, PNG, WebP (max 10MB)</p>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              onChange={(e) => handleFileSelect(e.target.files[0])}
-              style={{ display: 'none' }}
+              onChange={handleFileInputChange}
+              className="hidden-input"
             />
           </div>
 
@@ -323,7 +190,7 @@ function App() {
               <label>Select Food</label>
               <select
                 value={selectedFood}
-                onChange={(e) => setSelectedFood(e.target.value)}
+                onChange={(e) => handleFoodChange(e.target.value)}
                 className="food-select"
               >
                 <option value="">-- Select a dish --</option>
@@ -341,7 +208,7 @@ function App() {
               <input
                 type="text"
                 value={customFood}
-                onChange={(e) => setCustomFood(e.target.value)}
+                onChange={(e) => handleCustomFoodChange(e.target.value)}
                 placeholder="e.g., Malai Kofta"
                 className="text-input"
               />
@@ -354,7 +221,7 @@ function App() {
               <input
                 type="text"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => handleAmountChange(e.target.value)}
                 placeholder="e.g., 1 plate, 2 pieces, 200g"
                 className="text-input"
               />
@@ -372,7 +239,7 @@ function App() {
       {loading && (
         <div className="loading">
           <div className="spinner"></div>
-          <p style={{ marginTop: '16px', color: '#666' }}>Analyzing your food...</p>
+          <p className="loading-text">Analyzing your food...</p>
         </div>
       )}
 
